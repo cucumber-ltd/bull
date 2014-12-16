@@ -53,6 +53,34 @@ describe('Queue', function(){
     });
   });
 
+  it('create a queue using redis factory function', function(done){
+    var queue = Queue('custom', {
+      redis: {
+        createClient: function() {
+          return redis.createClient(6379, '127.0.0.1', {
+            max_attempts: 42
+          });
+        }
+      }
+    });
+
+    queue.once('ready', function(){
+      expect(queue.client.host).to.be('127.0.0.1');
+      expect(queue.bclient.host).to.be('127.0.0.1');
+
+      expect(queue.client.port).to.be(6379);
+      expect(queue.bclient.port).to.be(6379);
+
+      expect(queue.client.selected_db).to.be(0);
+      expect(queue.bclient.selected_db).to.be(0);
+
+      expect(queue.client.max_attempts).to.be(42);
+      expect(queue.bclient.max_attempts).to.be(42);
+
+      done();
+    });
+  });
+
   it('create a queue using custom redis paramters', function(done){
     var queue = Queue('custom', {redis: {DB: 1}});
 
@@ -522,11 +550,11 @@ describe('Queue', function(){
       });
     });
   });
-  
+
   it('should publish a message when a new message is added to the queue', function(done) {
     var client = redis.createClient(6379, '127.0.0.1', {});
     client.select(0);
-    queue = Queue('test pub sub');  
+    queue = Queue('test pub sub');
     client.on('ready', function () {
       client.on("message", function(channel, message) {
         expect(channel).to.be.equal(queue.toKey("jobs"));
